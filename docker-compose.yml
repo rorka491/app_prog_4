@@ -1,0 +1,80 @@
+services:
+  core:
+    build: ./flighter
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    ports:
+    - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sup1:
+        condition: service_healthy
+      sup2:
+        condition: service_healthy
+      sup3:
+        condition: service_healthy
+    env_file:
+      - ./flighter/.docker.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app_network
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - ./flighter/.docker.env
+    volumes:
+    - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app_network
+  sup1:
+    build: ./supplier
+    env_file:
+      - ./supplier/.env.supplier2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app_network
+  sup2:
+    build: ./supplier
+    env_file:
+      - ./supplier/.env.supplier2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app_network
+  sup3:
+    build: ./supplier
+    env_file:
+      - ./supplier/.env.supplier3
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
